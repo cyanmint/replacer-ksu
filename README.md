@@ -151,7 +151,7 @@ Drop-in config: `/data/adb/replacer.conf.d/10-debloat.csv`
 ```
 /data/adb/modules/replacer/
 ├── module.prop          # Module metadata
-├── service.sh           # Main script (runs on boot)
+├── post-fs-data.sh      # Main script (runs early in boot, before system apps load)
 ├── customize.sh         # Installation script
 ├── conf.csv             # Main configuration (editable via WebUI)
 ├── webroot/             # Web UI files
@@ -183,8 +183,8 @@ cat /data/adb/replacer.log
 
 ## How It Works
 
-1. On boot, the `service.sh` script is executed
-2. The script waits for the system to fully boot
+1. During early boot (post-fs-data stage), the `post-fs-data.sh` script is executed
+2. This runs **before system apps are detected**, ensuring replacements take effect immediately
 3. It starts processing from `${mod_dir}/conf.csv`
 4. When an `%include` directive is found:
    - If it points to a file: that file is processed
@@ -215,7 +215,7 @@ cat /data/adb/replacer.log
 ### Module not loading
 
 1. Check KernelSU Manager for error messages
-2. Verify `service.sh` has execute permissions
+2. Verify `post-fs-data.sh` has execute permissions
 3. Check for syntax errors in CSV files
 
 ## License

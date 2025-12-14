@@ -1,6 +1,7 @@
 #!/system/bin/sh
-# Service script for replacer module
-# This script processes CSV configuration with %include support
+# post-fs-data script for replacer module
+# This script runs early in boot process, before system apps are detected
+# This ensures file replacements are applied before apps load
 
 MODDIR=${0%/*}
 LOGFILE="/data/adb/replacer.log"
@@ -23,17 +24,8 @@ is_file_disabled() {
     fi
 }
 
-log "Replacer module started"
+log "Replacer module started (post-fs-data stage)"
 log "MODDIR: $MODDIR"
-
-# Wait for boot to complete
-while [ "$(getprop sys.boot_completed)" != "1" ]; do
-    sleep 1
-done
-
-# Additional wait to ensure system is ready
-sleep 5
-
 log "Processing replacer configuration files..."
 
 # Track processed files to prevent infinite loops

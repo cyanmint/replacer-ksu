@@ -12,7 +12,7 @@ ui_print "Installing Replacer module..."
 
 # Extract module files
 unzip -o "$ZIPFILE" 'module.prop' -d "$MODPATH" >&2
-unzip -o "$ZIPFILE" 'service.sh' -d "$MODPATH" >&2
+unzip -o "$ZIPFILE" 'post-fs-data.sh' -d "$MODPATH" >&2
 unzip -o "$ZIPFILE" 'conf.csv' -d "$MODPATH" >&2
 
 # Extract webroot directory
@@ -20,7 +20,7 @@ unzip -o "$ZIPFILE" 'webroot/*' -d "$MODPATH" >&2
 
 # Set permissions
 set_perm_recursive "$MODPATH" 0 0 0755 0644
-set_perm "$MODPATH/service.sh" 0 0 0755
+set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 
 # Create config directories
 mkdir -p /data/adb/replacer.conf.d
