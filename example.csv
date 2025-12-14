@@ -3,6 +3,13 @@
 # Lines starting with # are comments
 # Empty lines are ignored
 #
+# Special directive: %include
+# Use %include to include other configuration files or directories
+# Examples:
+# %include, /data/adb/replacer.conf
+# %include, /data/adb/replacer.conf.d/
+# %include, ${mod_dir}/custom.csv
+#
 # Replace a file:
 # /system/fonts/original.ttf, ${mod_dir}/files/new.ttf
 #

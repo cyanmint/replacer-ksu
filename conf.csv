@@ -1,0 +1,8 @@
+# Replacer main configuration
+# This file supports %include directive to include other configurations
+
+# Include system-wide configuration file
+%include, /data/adb/replacer.conf
+
+# Include all configurations from directory
+%include, /data/adb/replacer.conf.d/

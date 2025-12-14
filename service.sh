@@ -1,23 +1,30 @@
 #!/system/bin/sh
 # Service script for replacer module
-# This script processes CSV files in /data/adb/replacer.d/ and performs replacements
+# This script processes CSV configuration with %include support
 
 MODDIR=${0%/*}
-CONFIG_DIR="/data/adb/replacer.d"
 LOGFILE="/data/adb/replacer.log"
+DISABLED_FILES_DIR="$MODDIR/disabled_files"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOGFILE"
 }
 
+# Check if a file is disabled via WebUI
+is_file_disabled() {
+    local file_path="$1"
+    # Use base64 encoding of path as filename (simpler than full base64)
+    local marker="$DISABLED_FILES_DIR/$(echo -n "$file_path" | md5sum | cut -d' ' -f1)"
+    
+    if [ -f "$marker" ]; then
+        return 0  # File is disabled
+    else
+        return 1  # File is enabled
+    fi
+}
+
 log "Replacer module started"
 log "MODDIR: $MODDIR"
-
-# Create config directory if it doesn't exist
-if [ ! -d "$CONFIG_DIR" ]; then
-    mkdir -p "$CONFIG_DIR"
-    log "Created config directory: $CONFIG_DIR"
-fi
 
 # Wait for boot to complete
 while [ "$(getprop sys.boot_completed)" != "1" ]; do
@@ -29,12 +36,34 @@ sleep 5
 
 log "Processing replacer configuration files..."
 
-# Process all CSV files in sorted order
-for csv_file in "$CONFIG_DIR"/*.csv; do
+# Track processed files to prevent infinite loops
+PROCESSED_FILES="/tmp/replacer_processed_$$"
+: > "$PROCESSED_FILES"
+
+# Function to process a single CSV file
+process_csv_file() {
+    local csv_file="$1"
+    
+    # Check if file exists
     if [ ! -f "$csv_file" ]; then
-        continue
+        log "File not found: $csv_file"
+        return
     fi
     
+    # Check if file is disabled via WebUI
+    if is_file_disabled "$csv_file"; then
+        log "File is disabled via WebUI, skipping: $csv_file"
+        return
+    fi
+    
+    # Check if already processed (prevent circular includes)
+    if grep -qxF "$csv_file" "$PROCESSED_FILES" 2>/dev/null; then
+        log "Skipping already processed file: $csv_file"
+        return
+    fi
+    
+    # Mark as processed
+    echo "$csv_file" >> "$PROCESSED_FILES"
     log "Processing file: $csv_file"
     
     # Read CSV file line by line
@@ -53,6 +82,31 @@ for csv_file in "$CONFIG_DIR"/*.csv; do
         
         # Skip if original path is empty
         if [ -z "$original" ]; then
+            continue
+        fi
+        
+        # Check for %include directive
+        if [ "$original" = "%include" ]; then
+            log "Found include directive: $replacement"
+            
+            # Expand ${mod_dir} or ${MODDIR} in include path
+            replacement=$(echo "$replacement" | sed "s|\${mod_dir}|$MODDIR|g" | sed "s|\${MODDIR}|$MODDIR|g")
+            
+            # Check if it's a directory or file
+            if [ -d "$replacement" ]; then
+                log "Including directory: $replacement"
+                # Process all CSV files in the directory in sorted order
+                for include_file in "$replacement"/*.csv; do
+                    if [ -f "$include_file" ]; then
+                        process_csv_file "$include_file"
+                    fi
+                done
+            elif [ -f "$replacement" ]; then
+                log "Including file: $replacement"
+                process_csv_file "$replacement"
+            else
+                log "Include path not found: $replacement"
+            fi
             continue
         fi
         
@@ -135,6 +189,35 @@ for csv_file in "$CONFIG_DIR"/*.csv; do
     done < "$csv_file"
     
     log "Finished processing: $csv_file"
-done
+}
+
+# Main entry point - start with conf.csv in module directory
+MAIN_CONFIG="$MODDIR/conf.csv"
+
+if [ -f "$MAIN_CONFIG" ]; then
+    log "Starting with main config: $MAIN_CONFIG"
+    process_csv_file "$MAIN_CONFIG"
+else
+    log "Main config not found: $MAIN_CONFIG"
+    log "Creating default config with includes..."
+    
+    # Create default conf.csv if it doesn't exist
+    cat > "$MAIN_CONFIG" << 'EOF'
+# Replacer main configuration
+# This file supports %include directive to include other configurations
+
+# Include system-wide configuration
+%include, /data/adb/replacer.conf
+
+# Include all configurations from directory
+%include, /data/adb/replacer.conf.d/
+EOF
+    
+    log "Created default config, processing it now..."
+    process_csv_file "$MAIN_CONFIG"
+fi
+
+# Cleanup
+rm -f "$PROCESSED_FILES"
 
 log "Replacer module initialization completed"
