@@ -1,6 +1,6 @@
 // WebUI JavaScript for Replacer module
 const MODULE_PATH = '/data/adb/modules/replacer';
-const CONFIG_FILE = `${MODULE_PATH}/conf.csv`;
+const CONFIG_FILE = `${MODULE_PATH}/conf.conf`;
 const DISABLE_FILE = `${MODULE_PATH}/disable`;
 const DISABLED_FILES_DIR = `${MODULE_PATH}/disabled_files`;
 
@@ -149,35 +149,30 @@ function renderNode(node, container, parentEnabled) {
     icon.textContent = node.children.length > 0 ? '📁' : '📄';
     contentDiv.appendChild(icon);
     
-    // File name
+    // File name (clickable to edit)
     const name = document.createElement('span');
     name.className = 'tree-node-name';
     name.textContent = node.path;
+    name.style.cursor = node.exists ? 'pointer' : 'default';
+    if (node.exists) {
+        name.onclick = () => editFile(node.path);
+    }
     contentDiv.appendChild(name);
     
     // Status badge
     if (!node.exists) {
-        const status = document.createElement('span');
-        status.className = 'tree-node-status';
-        status.textContent = 'Not Found';
-        contentDiv.appendChild(status);
+        const badge = document.createElement('span');
+        badge.className = 'tree-node-badge';
+        badge.textContent = 'Not Found';
+        badge.style.background = '#ffcdd2';
+        badge.style.color = '#c62828';
+        contentDiv.appendChild(badge);
     } else if (node.children.length > 0) {
-        const status = document.createElement('span');
-        status.className = 'tree-node-status included';
-        status.textContent = `${node.children.length} included`;
-        contentDiv.appendChild(status);
+        const badge = document.createElement('span');
+        badge.className = 'tree-node-badge';
+        badge.textContent = `${node.children.length}`;
+        contentDiv.appendChild(badge);
     }
-    
-    // Edit button
-    if (node.exists) {
-        const editBtn = document.createElement('button');
-        editBtn.className = 'tree-node-edit';
-        editBtn.textContent = 'Edit';
-        editBtn.onclick = (e) => {
-            e.stopPropagation();
-            editFile(node.path);
-        };
-        contentDiv.appendChild(editBtn);
     }
     
     // Toggle switch
@@ -356,19 +351,19 @@ if (typeof ksu === 'undefined') {
         exec: async function(command) {
             console.log('KSU exec (mock):', command);
             
-            // Mock file contents
+            // Mock file contents with proper hierarchy
             const mockFiles = {
-                '/data/adb/modules/replacer/conf.csv': `# Replacer main configuration
+                '/data/adb/modules/replacer/conf.conf': `# Replacer main configuration
 # This file supports %include directive to include other configurations
 
 # Include system-wide configuration file
 %include, /data/adb/replacer.conf
+`,
+                '/data/adb/replacer.conf': `# System-wide replacer configuration
+# This includes configurations from the drop-in directory
 
 # Include all configurations from directory
 %include, /data/adb/replacer.conf.d/
-`,
-                '/data/adb/replacer.conf': `# System-wide replacer configuration
-# Add your global replacements here
 
 # Example:
 # /system/fonts/myfont.ttf, /data/adb/fonts/newfont.ttf

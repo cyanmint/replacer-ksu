@@ -13,7 +13,7 @@ ui_print "Installing Replacer module..."
 # Extract module files
 unzip -o "$ZIPFILE" 'module.prop' -d "$MODPATH" >&2
 unzip -o "$ZIPFILE" 'post-fs-data.sh' -d "$MODPATH" >&2
-unzip -o "$ZIPFILE" 'conf.csv' -d "$MODPATH" >&2
+unzip -o "$ZIPFILE" 'conf.conf' -d "$MODPATH" >&2
 
 # Extract webroot directory
 unzip -o "$ZIPFILE" 'webroot/*' -d "$MODPATH" >&2
@@ -36,7 +36,11 @@ fi
 if [ ! -f /data/adb/replacer.conf ]; then
     cat > /data/adb/replacer.conf << 'EOF'
 # System-wide replacer configuration
+# This includes configurations from the drop-in directory
 # Add your global replacements here
+
+# Include all configurations from directory
+%include, /data/adb/replacer.conf.d/
 
 # Example:
 # /system/fonts/myfont.ttf, /data/adb/fonts/newfont.ttf

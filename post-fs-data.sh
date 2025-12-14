@@ -107,7 +107,7 @@ process_csv_file() {
         
         # Check if this is a deletion (replacement is underscore)
         if [ "$replacement" = "_" ]; then
-            log "Deleting: $original"
+            log "Deletion requested: $original"
             
             # Check if path ends with / (directory)
             case "$original" in
@@ -119,7 +119,7 @@ process_csv_file() {
                             log "Successfully masked directory: $original" || \
                             log "Failed to mask directory: $original"
                     else
-                        log "Directory not found: $original"
+                        log "Directory not found, skipping deletion: $original"
                     fi
                     ;;
                 *)
@@ -129,7 +129,7 @@ process_csv_file() {
                             log "Successfully masked file: $original" || \
                             log "Failed to mask file: $original"
                     else
-                        log "File not found: $original"
+                        log "File not found, skipping deletion: $original"
                     fi
                     ;;
             esac
@@ -186,8 +186,8 @@ process_csv_file() {
     log "Finished processing: $csv_file"
 }
 
-# Main entry point - start with conf.csv in module directory
-MAIN_CONFIG="$MODDIR/conf.csv"
+# Main entry point - start with conf.conf in module directory
+MAIN_CONFIG="$MODDIR/conf.conf"
 
 if [ -f "$MAIN_CONFIG" ]; then
     log "Starting with main config: $MAIN_CONFIG"
@@ -196,16 +196,13 @@ else
     log "Main config not found: $MAIN_CONFIG"
     log "Creating default config with includes..."
     
-    # Create default conf.csv if it doesn't exist
+    # Create default conf.conf if it doesn't exist
     cat > "$MAIN_CONFIG" << 'EOF'
 # Replacer main configuration
 # This file supports %include directive to include other configurations
 
 # Include system-wide configuration
 %include, /data/adb/replacer.conf
-
-# Include all configurations from directory
-%include, /data/adb/replacer.conf.d/
 EOF
     
     log "Created default config, processing it now..."
