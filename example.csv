@@ -1,0 +1,21 @@
+# Example Replacer Configuration
+# Format: original_path, replacement_path
+# Lines starting with # are comments
+# Empty lines are ignored
+#
+# Replace a file:
+# /system/fonts/original.ttf, ${mod_dir}/files/new.ttf
+#
+# Delete a file (use underscore as replacement):
+# /system/priv-app/malware/malware.apk, _
+#
+# Replace a directory (paths must end with /):
+# /system/priv-app/app/, ${mod_dir}/replaceapp/
+#
+# Delete a directory (paths must end with /):
+# /system/priv-app/bloatware/, _
+
+# Example replacements (commented out - uncomment and modify as needed):
+# /product/fonts/original.ttf, ${mod_dir}/files/new.ttf
+# /system/priv-app/malware/malware.apk, _
+# /system/priv-app/app/, ${mod_dir}/replaceapp/

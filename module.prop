@@ -1,0 +1,7 @@
+id=replacer
+name=Replacer
+version=1.0.0
+versionCode=1
+author=cyanmint
+description=KernelSU module to replace or delete system files based on CSV configuration files in /data/adb/replacer.d/
+updateJson=
