@@ -151,9 +151,10 @@ process_csv_file() {
                         continue
                     fi
                     
+                    # If original doesn't exist, create it first
                     if [ ! -d "$original" ]; then
-                        log "Original directory not found: $original"
-                        continue
+                        log "Original directory not found, creating: $original"
+                        mkdir -p "$original"
                     fi
                     
                     mount -o bind "$replacement" "$original" 2>/dev/null && \
@@ -167,9 +168,13 @@ process_csv_file() {
                         continue
                     fi
                     
+                    # If original doesn't exist, create it first
                     if [ ! -e "$original" ]; then
-                        log "Original file not found: $original"
-                        continue
+                        log "Original file not found, creating: $original"
+                        # Create parent directory if needed
+                        mkdir -p "$(dirname "$original")"
+                        # Create empty file
+                        touch "$original"
                     fi
                     
                     mount -o bind "$replacement" "$original" 2>/dev/null && \

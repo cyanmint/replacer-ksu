@@ -356,10 +356,9 @@ if (typeof ksu === 'undefined') {
         exec: async function(command) {
             console.log('KSU exec (mock):', command);
             
-            // Mock responses for testing
-            if (command.includes('cat') && command.includes('conf.csv')) {
-                return {
-                    stdout: `# Replacer main configuration
+            // Mock file contents
+            const mockFiles = {
+                '/data/adb/modules/replacer/conf.csv': `# Replacer main configuration
 # This file supports %include directive to include other configurations
 
 # Include system-wide configuration file
@@ -368,15 +367,79 @@ if (typeof ksu === 'undefined') {
 # Include all configurations from directory
 %include, /data/adb/replacer.conf.d/
 `,
+                '/data/adb/replacer.conf': `# System-wide replacer configuration
+# Add your global replacements here
+
+# Example:
+# /system/fonts/myfont.ttf, /data/adb/fonts/newfont.ttf
+`,
+                '/data/adb/replacer.conf.d/10-fonts.csv': `# Font replacements
+/system/fonts/NotoSans.ttf, /data/adb/fonts/custom.ttf
+`,
+                '/data/adb/replacer.conf.d/20-apps.csv': `# App replacements
+/system/priv-app/bloat/, _
+`
+            };
+            
+            // Handle cat commands for reading files
+            if (command.includes('cat ')) {
+                for (const [path, content] of Object.entries(mockFiles)) {
+                    if (command.includes(path)) {
+                        return { stdout: content, stderr: '', code: 0 };
+                    }
+                }
+                // File not found
+                return { stdout: '', stderr: 'File not found', code: 1 };
+            }
+            
+            // Handle md5sum for file markers
+            if (command.includes('md5sum')) {
+                const match = command.match(/echo -n "([^"]+)"/);
+                if (match) {
+                    const input = match[1];
+                    // Simple mock hash based on input length
+                    const hash = 'abc' + input.length.toString().padStart(29, '0');
+                    return { stdout: hash + '\n', stderr: '', code: 0 };
+                }
+                return { stdout: 'abc123def456\n', stderr: '', code: 0 };
+            }
+            
+            // Handle file existence checks in disabled_files
+            if (command.includes('[ -f ') && command.includes('disabled_files')) {
+                // Mock: files are enabled by default
+                return { stdout: 'yes', stderr: '', code: 0 };
+            }
+            
+            // Handle directory checks
+            if (command.includes('[ -d ')) {
+                if (command.includes('replacer.conf.d')) {
+                    return { stdout: 'yes', stderr: '', code: 0 };
+                }
+                return { stdout: 'no', stderr: '', code: 0 };
+            }
+            
+            // Handle find command for directory listing
+            if (command.includes('find') && command.includes('replacer.conf.d')) {
+                return {
+                    stdout: `/data/adb/replacer.conf.d/10-fonts.csv
+/data/adb/replacer.conf.d/20-apps.csv`,
                     stderr: '',
                     code: 0
                 };
             }
             
+            // Handle module disable check
             if (command.includes('disable')) {
                 return { stdout: 'enabled', stderr: '', code: 0 };
             }
             
+            // Handle mkdir, rm, touch, echo commands (return success)
+            if (command.includes('mkdir') || command.includes('rm ') || 
+                command.includes('touch') || command.includes('echo ')) {
+                return { stdout: '', stderr: '', code: 0 };
+            }
+            
+            // Default success response
             return { stdout: '', stderr: '', code: 0 };
         }
     };
