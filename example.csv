@@ -3,6 +3,9 @@
 # Lines starting with # are comments
 # Empty lines are ignored
 #
+# NOTE: This module is for KernelSU only (not Magisk compatible)
+# KSU automatically substitutes ${mod_dir} with the module path
+#
 # Special directive: %include
 # Use %include to include other configuration files or directories
 # Examples:

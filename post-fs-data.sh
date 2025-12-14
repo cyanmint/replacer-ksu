@@ -81,8 +81,7 @@ process_csv_file() {
         if [ "$original" = "%include" ]; then
             log "Found include directive: $replacement"
             
-            # Expand ${mod_dir} or ${MODDIR} in include path
-            replacement=$(echo "$replacement" | sed "s|\${mod_dir}|$MODDIR|g" | sed "s|\${MODDIR}|$MODDIR|g")
+            # Note: ${mod_dir} variable substitution is handled by KSU automatically
             
             # Check if it's a directory or file
             if [ -d "$replacement" ]; then
@@ -104,8 +103,7 @@ process_csv_file() {
         
         log "Processing: '$original' -> '$replacement'"
         
-        # Expand ${mod_dir} or ${MODDIR} in replacement path
-        replacement=$(echo "$replacement" | sed "s|\${mod_dir}|$MODDIR|g" | sed "s|\${MODDIR}|$MODDIR|g")
+        # Note: ${mod_dir} variable substitution is handled by KSU automatically
         
         # Check if this is a deletion (replacement is underscore)
         if [ "$replacement" = "_" ]; then

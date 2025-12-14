@@ -69,8 +69,8 @@ async function parseConfigTree(filePath, depth, processed = new Set()) {
             
             // Check for %include directive
             if (original === '%include') {
-                let includePath = replacement.replace(/\$\{mod_dir\}/g, MODULE_PATH)
-                                           .replace(/\$\{MODDIR\}/g, MODULE_PATH);
+                // Note: ${mod_dir} variable substitution is handled by KSU automatically
+                let includePath = replacement;
                 
                 // Check if it's a directory
                 const isDirCheck = await ksu.exec(`[ -d "${includePath}" ] && echo "yes" || echo "no"`);

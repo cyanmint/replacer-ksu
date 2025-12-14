@@ -1,5 +1,6 @@
 # Replacer main configuration
 # This file supports %include directive to include other configurations
+# Note: ${mod_dir} is automatically substituted by KernelSU
 
 # Include system-wide configuration file
 %include, /data/adb/replacer.conf

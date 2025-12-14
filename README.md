@@ -2,6 +2,8 @@
 
 A KernelSU module that automatically replaces or deletes system files based on CSV configuration files.
 
+**Note:** This module is designed specifically for KernelSU (and its derivatives like KSUNext, APatch, Sukisu-Ultra, etc.). It does not support Magisk.
+
 ## Features
 
 - 📝 Simple CSV-based configuration
@@ -9,14 +11,15 @@ A KernelSU module that automatically replaces or deletes system files based on C
 - 🔄 Automatic file and directory replacement
 - 🗑️ File and directory deletion support
 - 📂 Support for both files and directories
-- 🔧 Variable substitution for module directory
+- 🔧 KSU variable substitution support (${mod_dir})
 - 📊 Hierarchical configuration with %include directive
 - 📋 Detailed logging
+- ⚡ Uses KSU-native `.replace` files for directory replacement
 
 ## Installation
 
 1. Download the module ZIP file
-2. Install via KernelSU Manager
+2. Install via KernelSU Manager (or compatible manager)
 3. Reboot your device
 4. Access the Web UI from KernelSU Manager to configure
 
@@ -141,10 +144,12 @@ Drop-in config: `/data/adb/replacer.conf.d/10-debloat.csv`
 4. **Paths ending with `/`**: Treated as directories
 5. **Paths without trailing `/`**: Treated as files
 6. **Variable substitution**:
-   - `${mod_dir}` or `${MODDIR}` will be replaced with the module directory path
-   - Example: `/data/adb/modules/replacer`
+   - `${mod_dir}` is automatically substituted by KernelSU with the module directory path
+   - Example: `${mod_dir}` → `/data/adb/modules/replacer`
+   - The module does not perform this substitution - KSU handles it natively
 7. **Deletion marker**: Use `_` (underscore) as the replacement path to delete/mask a file or directory
 8. **Limitation**: Paths containing commas (`,`) are not supported due to CSV format constraints
+9. **KSU-only**: This module uses KSU-specific features (`.replace` files) and does not support Magisk
 
 ## Directory Structure
 
@@ -185,15 +190,27 @@ cat /data/adb/replacer.log
 
 1. During early boot (post-fs-data stage), the `post-fs-data.sh` script is executed
 2. This runs **before system apps are detected**, ensuring replacements take effect immediately
-3. It starts processing from `${mod_dir}/conf.csv`
-4. When an `%include` directive is found:
+3. KSU automatically substitutes `${mod_dir}` variables before the script runs
+4. It starts processing from `${mod_dir}/conf.csv`
+5. When an `%include` directive is found:
    - If it points to a file: that file is processed
    - If it points to a directory: all `.csv` files in that directory are processed in sorted order
    - Circular includes are prevented automatically
-5. For each replacement line:
+6. For each replacement line:
    - If replacement is `_`: The file/directory is masked using bind mount or tmpfs
    - Otherwise: The file/directory is replaced using bind mount
-6. All operations are logged to `/data/adb/replacer.log`
+   - For directories, KSU's native `.replace` mechanism is leveraged
+7. All operations are logged to `/data/adb/replacer.log`
+
+### KSU-Specific Features
+
+This module utilizes KernelSU-specific features:
+- **Variable substitution**: KSU handles `${mod_dir}` before the module processes configs
+- **`.replace` files**: For complete directory replacement (KSU native feature)
+- **Early boot hooks**: Uses `post-fs-data.sh` for early execution
+
+**Note**: This module is not compatible with Magisk due to reliance on KSU-specific features.
+
 
 ## Tips
 
