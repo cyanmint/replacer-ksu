@@ -39,8 +39,11 @@ for csv_file in "$CONFIG_DIR"/*.csv; do
     
     # Read CSV file line by line
     while IFS= read -r line || [ -n "$line" ]; do
+        # Trim leading and trailing whitespace for comment detection
+        trimmed_line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        
         # Skip empty lines and comments
-        if [ -z "$line" ] || echo "$line" | grep -q "^#"; then
+        if [ -z "$trimmed_line" ] || echo "$trimmed_line" | grep -q "^#"; then
             continue
         fi
         
