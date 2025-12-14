@@ -30,7 +30,7 @@ sleep 5
 log "Processing replacer configuration files..."
 
 # Process all CSV files in sorted order
-for csv_file in $(ls -1 "$CONFIG_DIR"/*.csv 2>/dev/null | sort); do
+for csv_file in "$CONFIG_DIR"/*.csv; do
     if [ ! -f "$csv_file" ]; then
         continue
     fi
@@ -65,9 +65,10 @@ for csv_file in $(ls -1 "$CONFIG_DIR"/*.csv 2>/dev/null | sort); do
             # Check if path ends with / (directory)
             case "$original" in
                 */)
-                    # Remove directory
+                    # Mask directory by creating empty tmpfs
+                    original="${original%/}"  # Remove trailing slash
                     if [ -d "$original" ]; then
-                        mount -o bind /dev/null "$original" 2>/dev/null && \
+                        mount -t tmpfs -o size=1k tmpfs "$original" 2>/dev/null && \
                             log "Successfully masked directory: $original" || \
                             log "Failed to mask directory: $original"
                     else
@@ -75,8 +76,8 @@ for csv_file in $(ls -1 "$CONFIG_DIR"/*.csv 2>/dev/null | sort); do
                     fi
                     ;;
                 *)
-                    # Remove file
-                    if [ -f "$original" ]; then
+                    # Mask file with /dev/null
+                    if [ -e "$original" ]; then
                         mount -o bind /dev/null "$original" 2>/dev/null && \
                             log "Successfully masked file: $original" || \
                             log "Failed to mask file: $original"
@@ -112,12 +113,12 @@ for csv_file in $(ls -1 "$CONFIG_DIR"/*.csv 2>/dev/null | sort); do
                     ;;
                 *)
                     # File replacement
-                    if [ ! -f "$replacement" ] && [ ! -e "$replacement" ]; then
+                    if [ ! -e "$replacement" ]; then
                         log "Replacement file not found: $replacement"
                         continue
                     fi
                     
-                    if [ ! -f "$original" ] && [ ! -e "$original" ]; then
+                    if [ ! -e "$original" ]; then
                         log "Original file not found: $original"
                         continue
                     fi

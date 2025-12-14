@@ -83,6 +83,7 @@ File: `/data/adb/replacer.d/10-replace-font.csv`
    - `${mod_dir}` or `${MODDIR}` will be replaced with the module directory path
    - Example: `/data/adb/modules/replacer`
 6. **Deletion marker**: Use `_` (underscore) as the replacement path to delete/mask a file or directory
+7. **Limitation**: Paths containing commas (`,`) are not supported due to CSV format constraints
 
 ## Directory Structure
 
