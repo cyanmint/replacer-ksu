@@ -260,7 +260,7 @@ async function editFile(filePath) {
         document.getElementById('configEditor').value = response.stdout || '';
         
         // Scroll to editor
-        document.querySelector('.section h2').scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('configEditor').scrollIntoView({ behavior: 'smooth', block: 'center' });
         showStatus(`Editing: ${filePath}`, 'success');
     } catch (error) {
         console.error('Error loading file:', error);

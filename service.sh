@@ -13,7 +13,7 @@ log() {
 # Check if a file is disabled via WebUI
 is_file_disabled() {
     local file_path="$1"
-    # Use base64 encoding of path as filename (simpler than full base64)
+    # Use md5 hash of path as marker filename
     local marker="$DISABLED_FILES_DIR/$(echo -n "$file_path" | md5sum | cut -d' ' -f1)"
     
     if [ -f "$marker" ]; then
