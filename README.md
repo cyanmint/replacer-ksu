@@ -16,13 +16,10 @@ A KernelSU module that automatically replaces or deletes system files based on C
 - 📋 Detailed logging
 - ⚡ Uses KSU-native `.replace` files for directory replacement
 - 🛡️ **Bootloop protection** - automatically disables after 3 failed boots
-- 🔒 **Critical path protection** - prevents replacement/deletion of essential system files
 
-## Safety Features
+## Bootloop Protection
 
-The module includes multiple safety mechanisms to prevent bootloops and system issues:
-
-### Bootloop Protection
+The module includes a built-in safety mechanism to prevent boot loops:
 
 - **Boot Flag System**: Creates a flag file on each boot
 - **Auto-Detection**: Monitors for successful user login (device unlock)
@@ -32,26 +29,7 @@ The module includes multiple safety mechanisms to prevent bootloops and system i
 
 This ensures that if the module causes a boot issue, it will self-disable after 3 attempts, allowing you to boot into your device safely.
 
-### Critical Path Protection
-
-The module automatically refuses to replace or delete critical system paths that could cause bootloops:
-
-- Core system directories (`/system`, `/system/bin`, `/system/lib`, `/vendor`, `/product`, etc.)
-- Essential binaries (`sh`, `toybox`, `toolbox`, `app_process`, `servicemanager`)
-- Init system files (`/init`, `/init.rc`, init scripts)
-- Framework files (`/system/framework/*`)
-- SELinux configuration (`/system/etc/selinux/*`)
-- Device nodes (`/dev`, `/proc`, `/sys`)
-
-If you attempt to modify these paths, the module will log a warning and skip the operation.
-
-### Smart File Creation
-
-When creating mount targets that don't exist:
-- Only creates files/directories if their parent directory exists
-- Uses read-only bind mounts by default for safety
-- Fails gracefully with logging if creation is not possible
-- Prevents creating files in non-existent hierarchies that could break the system
+**Note**: The module does not restrict which files you can replace or delete. Users are responsible for understanding the impact of their modifications. Be careful when replacing critical system files.
 
 ## Installation
 
