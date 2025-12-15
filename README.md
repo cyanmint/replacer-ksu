@@ -31,6 +31,21 @@ This ensures that if the module causes a boot issue, it will self-disable after 
 
 **Note**: The module does not restrict which files you can replace or delete. Users are responsible for understanding the impact of their modifications. Be careful when replacing critical system files.
 
+### Important Limitations
+
+⚠️ **Read-only Filesystems**: Some files (especially in `/system`, `/product`, `/vendor`) exist on read-only partitions. The module can only replace files that:
+1. Already exist on the device, OR
+2. Can be created in a writable location
+
+If a file doesn't exist and the parent directory is read-only, the replacement will be skipped. Check `/data/adb/replacer.log` for details.
+
+💡 **Tip for Font Replacements**: Fonts in `/system/fonts/` and `/product/fonts/` may cause issues if:
+- The original font file doesn't exist
+- The timing conflicts with font cache initialization
+- System is using the font during boot
+
+Consider using fonts from `/data/` locations or ensuring the original fonts exist before replacement.
+
 ## Installation
 
 1. Download the module ZIP file
@@ -265,6 +280,35 @@ If the module has auto-disabled due to bootloop protection:
 6. **Reboot**: Test your changes
 
 The bootloop protection counter resets after each successful user login (device unlock with password/PIN).
+
+### Font replacement causing bootloop
+
+If replacing fonts causes bootloop issues:
+
+1. **Verify original files exist**: The module cannot create files in read-only `/system/fonts/` or `/product/fonts/`
+   ```bash
+   ls -la /system/fonts/Roboto-Regular.ttf
+   ls -la /product/fonts/MiSansVF.ttf
+   ```
+
+2. **Check the log for "read-only filesystem" errors**: 
+   ```bash
+   grep "read-only" /data/adb/replacer.log
+   grep "Failed" /data/adb/replacer.log
+   ```
+
+3. **Common solutions**:
+   - Only replace fonts that already exist on your device
+   - Use fonts from writable locations (e.g., `/data/fonts/`)
+   - Copy replacement fonts to a writable location first
+   - Consider using Magisk modules designed specifically for fonts if available
+
+4. **Disable problematic font replacements**: Comment them out in your CSV:
+   ```csv
+   # /system/fonts/Roboto-Regular.ttf, /data/fonts/SarasaFixedCL-Light.ttf
+   ```
+
+The module will log clearly if it cannot create mount targets due to read-only filesystems.
 
 ## License
 
