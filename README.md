@@ -15,6 +15,43 @@ A KernelSU module that automatically replaces or deletes system files based on C
 - 📊 Hierarchical configuration with %include directive
 - 📋 Detailed logging
 - ⚡ Uses KSU-native `.replace` files for directory replacement
+- 🛡️ **Bootloop protection** - automatically disables after 3 failed boots
+- 🔒 **Critical path protection** - prevents replacement/deletion of essential system files
+
+## Safety Features
+
+The module includes multiple safety mechanisms to prevent bootloops and system issues:
+
+### Bootloop Protection
+
+- **Boot Flag System**: Creates a flag file on each boot
+- **Auto-Detection**: Monitors for successful user login (device unlock)
+- **Flag Clearing**: Removes flags when user unlocks device with password/PIN
+- **Auto-Disable**: If 3 boot flags accumulate (3 boots without login), the module automatically disables itself
+- **Safe Recovery**: Once disabled, fix your configuration and re-enable via KernelSU Manager
+
+This ensures that if the module causes a boot issue, it will self-disable after 3 attempts, allowing you to boot into your device safely.
+
+### Critical Path Protection
+
+The module automatically refuses to replace or delete critical system paths that could cause bootloops:
+
+- Core system directories (`/system`, `/system/bin`, `/system/lib`, `/vendor`, `/product`, etc.)
+- Essential binaries (`sh`, `toybox`, `toolbox`, `app_process`, `servicemanager`)
+- Init system files (`/init`, `/init.rc`, init scripts)
+- Framework files (`/system/framework/*`)
+- SELinux configuration (`/system/etc/selinux/*`)
+- Device nodes (`/dev`, `/proc`, `/sys`)
+
+If you attempt to modify these paths, the module will log a warning and skip the operation.
+
+### Smart File Creation
+
+When creating mount targets that don't exist:
+- Only creates files/directories if their parent directory exists
+- Uses read-only bind mounts by default for safety
+- Fails gracefully with logging if creation is not possible
+- Prevents creating files in non-existent hierarchies that could break the system
 
 ## Installation
 
@@ -234,6 +271,22 @@ This module utilizes KernelSU-specific features:
 1. Check KernelSU Manager for error messages
 2. Verify `post-fs-data.sh` has execute permissions
 3. Check for syntax errors in CSV files
+
+### Bootloop protection activated
+
+If the module has auto-disabled due to bootloop protection:
+
+1. **Check the log**: `cat /data/adb/replacer.log` to see what happened
+2. **Review your configuration**: Look for problematic replacements in your CSV files
+3. **Fix the issue**: Comment out or remove problematic entries
+4. **Re-enable the module**: Remove the `disable` file from the module directory:
+   ```bash
+   rm /data/adb/modules/replacer/disable
+   ```
+5. **Clear boot flags** (optional): `rm -rf /data/adb/modules/replacer/bootloop_protection/boot_flag_*`
+6. **Reboot**: Test your changes
+
+The bootloop protection counter resets after each successful user login (device unlock with password/PIN).
 
 ## License
 

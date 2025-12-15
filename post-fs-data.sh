@@ -6,9 +6,76 @@
 MODDIR=${0%/*}
 LOGFILE="/data/adb/replacer.log"
 DISABLED_FILES_DIR="$MODDIR/disabled_files"
+BOOTLOOP_PROTECTION_DIR="$MODDIR/bootloop_protection"
+DISABLE_FILE="$MODDIR/disable"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOGFILE"
+}
+
+# Critical system paths that should NEVER be replaced or deleted
+# Adding protection for these to prevent bootloops
+is_critical_path() {
+    local path="$1"
+    
+    # Critical paths that could cause bootloops if modified
+    case "$path" in
+        /system|/system/|/system/bin|/system/bin/|/system/lib|/system/lib/|/system/lib64|/system/lib64/)
+            return 0 ;;
+        /vendor|/vendor/|/product|/product/|/data|/data/)
+            return 0 ;;
+        /system/bin/sh|/system/bin/toybox|/system/bin/toolbox)
+            return 0 ;;
+        /init|/init.rc|/system/etc/init/*)
+            return 0 ;;
+        /system/framework/*)
+            return 0 ;;
+        /system/etc/selinux/*)
+            return 0 ;;
+        /system/bin/app_process*|/system/bin/servicemanager)
+            return 0 ;;
+        /dev/*|/proc/*|/sys/*)
+            return 0 ;;
+    esac
+    
+    return 1
+}
+
+# Bootloop protection mechanism
+bootloop_protection() {
+    # Create protection directory if it doesn't exist
+    mkdir -p "$BOOTLOOP_PROTECTION_DIR"
+    
+    # Count existing boot flags
+    local flag_count=$(ls -1 "$BOOTLOOP_PROTECTION_DIR"/boot_flag_* 2>/dev/null | wc -l)
+    
+    log "Bootloop protection: Found $flag_count existing boot flags"
+    
+    # Check if we've hit the threshold (3 boots without user login)
+    if [ "$flag_count" -ge 3 ]; then
+        log "BOOTLOOP DETECTED: 3 or more boots without user login"
+        log "Self-disabling module to prevent boot loop"
+        
+        # Create disable file to disable the module
+        touch "$DISABLE_FILE"
+        
+        # Clean up boot flags
+        rm -f "$BOOTLOOP_PROTECTION_DIR"/boot_flag_*
+        
+        log "Module disabled. Remove $DISABLE_FILE to re-enable"
+        log "Check your configuration in conf.conf before re-enabling"
+        log "Exiting without applying replacements"
+        
+        return 1  # Signal to exit
+    fi
+    
+    # Create new boot flag with timestamp
+    local timestamp=$(date +%s)
+    touch "$BOOTLOOP_PROTECTION_DIR/boot_flag_$timestamp"
+    
+    log "Created boot flag $timestamp (count: $((flag_count + 1))/3)"
+    
+    return 0  # Continue normally
 }
 
 # Check if a file is disabled via WebUI
@@ -26,6 +93,13 @@ is_file_disabled() {
 
 log "Replacer module started (post-fs-data stage)"
 log "MODDIR: $MODDIR"
+
+# Run bootloop protection check
+if ! bootloop_protection; then
+    # Bootloop detected, module self-disabled
+    exit 0
+fi
+
 log "Processing replacer configuration files..."
 
 # Track processed files to prevent infinite loops
@@ -109,6 +183,13 @@ process_csv_file() {
         if [ "$replacement" = "_" ]; then
             log "Deletion requested: $original"
             
+            # Check if path is critical - refuse to delete critical paths
+            if is_critical_path "$original"; then
+                log "CRITICAL PATH PROTECTION: Refusing to delete critical path: $original"
+                log "This path is protected to prevent bootloops"
+                continue
+            fi
+            
             # Check if path ends with / (directory)
             case "$original" in
                 */)
@@ -137,6 +218,13 @@ process_csv_file() {
             # This is a replacement
             log "Replacing: $original with $replacement"
             
+            # Check if path is critical - refuse to replace critical paths
+            if is_critical_path "$original"; then
+                log "CRITICAL PATH PROTECTION: Refusing to replace critical path: $original"
+                log "This path is protected to prevent bootloops"
+                continue
+            fi
+            
             # Check if paths end with / (directories)
             case "$original" in
                 */)
@@ -149,13 +237,24 @@ process_csv_file() {
                         continue
                     fi
                     
-                    # If original doesn't exist, create it first
+                    # If original doesn't exist, only create if parent exists
+                    # This prevents creating paths in non-existent hierarchies
                     if [ ! -d "$original" ]; then
-                        log "Original directory not found, creating: $original"
-                        mkdir -p "$original"
+                        local parent_dir="$(dirname "$original")"
+                        if [ -d "$parent_dir" ]; then
+                            log "Original directory not found, creating: $original"
+                            mkdir -p "$original" 2>/dev/null || {
+                                log "Failed to create directory: $original"
+                                continue
+                            }
+                        else
+                            log "Parent directory doesn't exist, skipping: $original"
+                            log "Create parent manually if this replacement is needed"
+                            continue
+                        fi
                     fi
                     
-                    mount -o bind "$replacement" "$original" 2>/dev/null && \
+                    mount -o bind,ro "$replacement" "$original" 2>/dev/null && \
                         log "Successfully replaced directory: $original" || \
                         log "Failed to replace directory: $original"
                     ;;
@@ -166,16 +265,30 @@ process_csv_file() {
                         continue
                     fi
                     
-                    # If original doesn't exist, create it first
+                    # If original doesn't exist, only create if parent exists
+                    # This prevents creating files in non-existent hierarchies
                     if [ ! -e "$original" ]; then
-                        log "Original file not found, creating: $original"
-                        # Create parent directory if needed
-                        mkdir -p "$(dirname "$original")"
-                        # Create empty file
-                        touch "$original"
+                        local parent_dir="$(dirname "$original")"
+                        if [ -d "$parent_dir" ]; then
+                            log "Original file not found, creating: $original"
+                            # Create parent directory if needed
+                            mkdir -p "$parent_dir" 2>/dev/null || {
+                                log "Failed to create parent directory for: $original"
+                                continue
+                            }
+                            # Create empty file
+                            touch "$original" 2>/dev/null || {
+                                log "Failed to create file: $original"
+                                continue
+                            }
+                        else
+                            log "Parent directory doesn't exist, skipping: $original"
+                            log "Create parent manually if this replacement is needed"
+                            continue
+                        fi
                     fi
                     
-                    mount -o bind "$replacement" "$original" 2>/dev/null && \
+                    mount -o bind,ro "$replacement" "$original" 2>/dev/null && \
                         log "Successfully replaced file: $original" || \
                         log "Failed to replace file: $original"
                     ;;
