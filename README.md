@@ -181,6 +181,31 @@ Drop-in config: `/data/adb/replacer.conf.d/10-debloat.csv`
 8. **Limitation**: Paths containing commas (`,`) are not supported due to CSV format constraints
 9. **KSU-only**: This module uses KSU-specific features (`.replace` files) and does not support Magisk
 
+## Important: Replacement File Storage
+
+⚠️ **WARNING**: Do NOT place your replacement files in `/data/adb/*` directories (except the module directory)!
+
+**Reason**: Files in `/data/adb/` may not be accessible during early boot stages when this module runs, which can cause bootloops.
+
+**Recommended locations for replacement files**:
+- ✅ `${mod_dir}/files/` - Inside the module directory (RECOMMENDED)
+- ✅ `/data/replacements/` - Dedicated directory for replacements
+- ✅ `/data/local/` - Alternative safe location
+
+**Example configuration**:
+```csv
+# ✅ GOOD - Using module directory
+/system/fonts/font.ttf, ${mod_dir}/files/newfont.ttf
+
+# ✅ GOOD - Using dedicated directory
+/system/fonts/font.ttf, /data/replacements/newfont.ttf
+
+# ❌ BAD - May cause bootloop
+/system/fonts/font.ttf, /data/adb/fonts/newfont.ttf
+```
+
+Always place your replacement files in the module's `files/` directory or a safe location like `/data/replacements/` to avoid bootloop issues.
+
 ## Directory Structure
 
 ```

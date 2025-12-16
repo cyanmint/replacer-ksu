@@ -207,14 +207,16 @@ process_csv_file() {
                     ;;
                 *)
                     # File replacement
+                    # First check if replacement file exists
                     if [ ! -e "$replacement" ]; then
-                        log "Replacement file not found: $replacement"
+                        log "Replacement file not found, skipping: $replacement"
                         continue
                     fi
                     
-                    # If original doesn't exist, create it first
+                    # If original doesn't exist, create it from replacement
                     if [ ! -e "$original" ]; then
                         log "Original file not found: $original"
+                        log "Creating from replacement: $replacement"
                         
                         # Check if parent directory exists and is writable
                         parent_dir="$(dirname "$original")"
@@ -224,31 +226,22 @@ process_csv_file() {
                             continue
                         fi
                         
-                        # Try to create the file
-                        if ! touch "$original" 2>/dev/null; then
-                            log "Failed to create mount target (read-only filesystem?): $original"
-                            log "Skipping this replacement - original file must exist"
+                        # Copy the replacement file to create the original
+                        if cp "$replacement" "$original" 2>/dev/null; then
+                            log "Successfully created file from replacement: $original"
+                        else
+                            log "Failed to create file (read-only filesystem?): $original"
+                            log "Skipping this replacement"
                             continue
                         fi
-                        
-                        log "Created mount target: $original"
-                    fi
-                    
-                    # Verify the file exists before attempting mount
-                    if [ ! -e "$original" ]; then
-                        log "Mount target verification failed: $original"
-                        continue
-                    fi
-                    
-                    # Attempt bind mount with error checking
-                    if mount -o bind "$replacement" "$original" 2>/dev/null; then
-                        log "Successfully replaced file: $original"
                     else
-                        log "Failed to bind mount: $original"
-                        log "This may be due to read-only filesystem or early boot timing"
-                        # Clean up the created file if mount failed
-                        if [ -f "$original" ] && [ ! -s "$original" ]; then
-                            rm -f "$original" 2>/dev/null
+                        # Original exists, perform bind mount replacement
+                        # Attempt bind mount with error checking
+                        if mount -o bind "$replacement" "$original" 2>/dev/null; then
+                            log "Successfully replaced file: $original"
+                        else
+                            log "Failed to bind mount: $original"
+                            log "This may be due to read-only filesystem or early boot timing"
                         fi
                     fi
                     ;;
